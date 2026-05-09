@@ -1,7 +1,6 @@
 version: "3.8"
 
 services:
-  # ─── Database Layer ───────────────────────────────────────────────
   mysql-master:
     image: mysql:8.0
     container_name: mysql-master
@@ -53,7 +52,6 @@ services:
       retries: 10
       start_period: 30s
 
-  # Runs once to wire the slave to the master
   replication-setup:
     image: mysql:8.0
     container_name: replication-setup
@@ -70,6 +68,64 @@ services:
       mysql-slave:
         condition: service_healthy
     entrypoint: ["bash", "/setup-replication.sh"]
+
+  api-node-1:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    container_name: api-node-1
+    restart: unless-stopped
+    environment:
+      NODE_ID: api-node-1
+      MASTER_HOST: mysql-master
+      SLAVE_HOST: mysql-slave
+      DB_PORT: 3306
+      DB_USER: appuser
+      DB_PASSWORD: apppass
+      DB_NAME: productsdb
+      PORT: 3000
+    networks:
+      - backend
+    depends_on:
+      mysql-master:
+        condition: service_healthy
+      mysql-slave:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  api-node-2:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    container_name: api-node-2
+    restart: unless-stopped
+    environment:
+      NODE_ID: api-node-2
+      MASTER_HOST: mysql-master
+      SLAVE_HOST: mysql-slave
+      DB_PORT: 3306
+      DB_USER: appuser
+      DB_PASSWORD: apppass
+      DB_NAME: productsdb
+      PORT: 3000
+    networks:
+      - backend
+    depends_on:
+      mysql-master:
+        condition: service_healthy
+      mysql-slave:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
 
 networks:
   backend:
