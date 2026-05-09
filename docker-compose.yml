@@ -5,6 +5,15 @@ services:
     image: mysql:8.0
     container_name: mysql-master
     restart: unless-stopped
+    command:
+      - --server-id=1
+      - --log-bin=mysql-bin
+      - --binlog-format=ROW
+      - --binlog-do-db=productsdb
+      - --sync-binlog=1
+      - --innodb-flush-log-at-trx-commit=1
+      - --binlog-expire-logs-seconds=604800
+      - --bind-address=0.0.0.0
     environment:
       MYSQL_ROOT_PASSWORD: rootpass
       MYSQL_DATABASE: productsdb
@@ -14,7 +23,6 @@ services:
       - "3306:3306"
     volumes:
       - mysql-master-data:/var/lib/mysql
-      - ./mysql/master/my.cnf:/etc/mysql/conf.d/my.cnf:ro
       - ./mysql/init/init-master.sql:/docker-entrypoint-initdb.d/init-master.sql:ro
     networks:
       - backend
@@ -29,6 +37,13 @@ services:
     image: mysql:8.0
     container_name: mysql-slave
     restart: unless-stopped
+    command:
+      - --server-id=2
+      - --relay-log=relay-bin
+      - --log-bin=mysql-bin
+      - --binlog-format=ROW
+      - --replicate-do-db=productsdb
+      - --bind-address=0.0.0.0
     environment:
       MYSQL_ROOT_PASSWORD: rootpass
       MYSQL_DATABASE: productsdb
@@ -38,7 +53,6 @@ services:
       - "3307:3306"
     volumes:
       - mysql-slave-data:/var/lib/mysql
-      - ./mysql/slave/my.cnf:/etc/mysql/conf.d/my.cnf:ro
       - ./mysql/init/init-slave.sql:/docker-entrypoint-initdb.d/init-slave.sql:ro
     networks:
       - backend
