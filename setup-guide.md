@@ -28,8 +28,8 @@ api-node-1  api-node-2   ← 2 API nodes (Node.js)
 ```
 
 **Luồng dữ liệu:**
-- `POST /products` → Nginx → api-node-N → **MySQL Master** (ghi)
-- `GET /products`  → Nginx → api-node-N → **MySQL Slave** (đọc)
+- `POST /products` → Nginx → api-node-N → **MySQL Master** (write)
+- `GET /products`  → Nginx → api-node-N → **MySQL Slave** (read)
 - MySQL Slave tự động đồng bộ dữ liệu từ Master qua Binary Log Replication
 
 ---
@@ -102,20 +102,20 @@ Seconds_Behind_Master: 0
 ### Test 4: Insert vào Master, kiểm tra Slave có dữ liệu
 
 ```bash
-# Ghi vào Master
+# Write vào Master
 docker exec mysql-master mysql -uroot -prootpass productsdb \
   -e "INSERT INTO products (name, price) VALUES ('Test Item', 1.00);" 2>/dev/null
 
-# Đọc từ Master
+# Read từ Master
 docker exec mysql-master mysql -uroot -prootpass productsdb \
   -e "SELECT * FROM products;" 2>/dev/null
 
-# Đọc từ Slave — phải có cùng dữ liệu
+# Read từ Slave — phải có cùng dữ liệu
 docker exec mysql-slave mysql -uroot -prootpass productsdb \
   -e "SELECT * FROM products;" 2>/dev/null
 ```
 
-### Test 5: Chứng minh Slave không cho ghi (read-only)
+### Test 5: Chứng minh Slave không cho write (read-only)
 
 ```bash
 docker exec mysql-slave mysql -uroot -prootpass productsdb \
@@ -129,7 +129,7 @@ Mong đợi: `ERROR 1290 (HY000): The MySQL server is running with the --super-r
 
 ## Phase 3 — Xác minh API & Read/Write Splitting
 
-### POST — Ghi vào Master
+### POST — Write vào Master
 
 ```bash
 curl -s -X POST http://localhost:80/products \
@@ -151,7 +151,7 @@ Mong đợi:
 }
 ```
 
-- `"written_to": "mysql-master"` — xác nhận ghi vào đúng Master
+- `"written_to": "mysql-master"` — xác nhận write vào đúng Master
 - `"processed_by"` — cho biết API node nào xử lý request
 - Có thể run lệnh Read danh sách Product ở trên để check xem insert đúng hay chưa
 
