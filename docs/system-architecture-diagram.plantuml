@@ -1,0 +1,31 @@
+@startuml
+skinparam shadowing false
+skinparam rectangle {
+  RoundCorner 8
+}
+
+rectangle "CLIENT (curl / Postman)" as client
+
+rectangle "NGINX Load Balancer\nRound Robin  |  :80\nproxy_next_upstream (fault-tolerant)" as nginx
+
+rectangle "api-node-1\nNode.js\n:3000" as api1
+rectangle "api-node-2\nNode.js\n:3000" as api2
+
+rectangle "READ / WRITE Splitting" as split
+
+rectangle "MySQL MASTER\n:3306\nRead + Write" as master
+rectangle "MySQL SLAVE\n:3307\nRead Only" as slave
+
+client --> nginx : HTTP :80
+
+nginx --> api1
+nginx --> api2
+
+api1 --> split
+api2 --> split
+
+split --> master : WRITE (POST)
+split --> slave : READ (GET)
+
+master --> slave : Binlog\nRepl
+@enduml

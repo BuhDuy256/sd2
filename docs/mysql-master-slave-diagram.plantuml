@@ -1,0 +1,19 @@
+@startuml
+skinparam shadowing false
+skinparam rectangle {
+  RoundCorner 8
+}
+
+rectangle "MASTER" as master {
+  rectangle "Binary Log (binlog)\nrecords every change\n(ROW format)" as binlog
+}
+
+rectangle "SLAVE" as slave {
+  rectangle "Relay Log" as relay
+  rectangle "SQL Thread\nreplays events\non slave tables" as sqlthread
+}
+
+master --> binlog
+binlog --> relay : replication stream
+relay --> sqlthread
+@enduml
